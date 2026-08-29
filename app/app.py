@@ -6,49 +6,58 @@ from image_utils import encode_image, decode_image
 from text_utils import encode_text, decode_text
 from utils import evaluate, get_download_bytes
 
-# --------------------------------------------------------
-# Page Configuration
-# --------------------------------------------------------
+
+# ========================================================
+# PAGE CONFIGURATION
+# ========================================================
 
 st.set_page_config(
     page_title="Deep Learning Steganography",
     page_icon="🔒",
     layout="wide"
 )
-st.markdown("""
-<div style="
-background: linear-gradient(135deg,#4F46E5,#06B6D4);
-padding:30px;
-border-radius:20px;
-text-align:center;
-margin-bottom:30px;
-box-shadow:0 8px 20px rgba(0,0,0,0.3);
-">
 
-<h1 style="
-color:white;
-font-size:42px;
-font-weight:700;
-margin-bottom:10px;
-">
-🔒 Deep Learning Steganography
-</h1>
 
-<p style="
-color:white;
-font-size:20px;
-margin:0;
-">
-Hide sensitive information inside images with state-of-the-art deep learning models.
-</p>
+# ========================================================
+# HEADER
+# ========================================================
 
-</div>
-""", unsafe_allow_html=True)
+st.markdown(
+    """
+    <div style="
+        background: linear-gradient(135deg, #4F46E5, #06B6D4);
+        padding: 30px;
+        border-radius: 20px;
+        text-align: center;
+        margin-bottom: 30px;
+    ">
+        <h1 style="
+            color: white;
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        ">
+            🔒 Deep Learning Steganography
+        </h1>
+
+        <p style="
+            color: white;
+            font-size: 20px;
+            margin: 0;
+        ">
+            Hide sensitive information inside images using Deep Learning and Encryption.
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 st.divider()
 
-# --------------------------------------------------------
-# Select Mode
-# --------------------------------------------------------
+
+# ========================================================
+# SELECT MODE
+# ========================================================
 
 mode = st.radio(
     "Choose Mode",
@@ -60,6 +69,7 @@ mode = st.radio(
 )
 
 st.divider()
+
 
 # ========================================================
 # IMAGE STEGANOGRAPHY
@@ -73,10 +83,12 @@ if mode == "🖼️ Image Steganography":
             "🔐 Encode",
             "🔓 Decode"
         ),
-        horizontal=True
+        horizontal=True,
+        key="image_operation"
     )
 
     st.divider()
+
 
     # ====================================================
     # IMAGE ENCODE
@@ -84,7 +96,7 @@ if mode == "🖼️ Image Steganography":
 
     if operation == "🔐 Encode":
 
-        st.subheader("Hide Image Inside Another Image")
+        st.subheader("🔐 Hide Image Inside Another Image")
 
         cover = st.file_uploader(
             "Upload Cover Image",
@@ -98,104 +110,169 @@ if mode == "🖼️ Image Steganography":
             key="secret"
         )
 
-        if st.button("🔐 Encode Image"):
+        if st.button(
+            "🔐 Encode Image",
+            use_container_width=False
+        ):
 
             if cover is None or secret is None:
 
-                st.warning("Please upload both images.")
+                st.warning(
+                    "⚠️ Please upload both Cover Image and Secret Image."
+                )
 
             else:
 
-                cover_img = Image.open(cover).convert("RGB")
-                secret_img = Image.open(secret).convert("RGB")
+                try:
 
-                with st.spinner("Encoding..."):
+                    # Load images
+                    cover_img = Image.open(cover).convert("RGB")
+                    secret_img = Image.open(secret).convert("RGB")
 
-                    (
-                        stego,
-                        recovered,
+                    with st.spinner(
+                        "🤖 AI model is encoding your images... Please wait."
+                    ):
+
+                        (
+                            stego,
+                            recovered,
+                            cover_tensor,
+                            secret_tensor,
+                            stego_tensor,
+                            recovered_tensor
+                        ) = encode_image(
+                            cover_img,
+                            secret_img
+                        )
+
+                    st.success(
+                        "✅ Image Encoding Completed Successfully!"
+                    )
+
+
+                    # ====================================
+                    # METRICS
+                    # ====================================
+
+                    metrics = evaluate(
                         cover_tensor,
                         secret_tensor,
                         stego_tensor,
                         recovered_tensor
-                    ) = encode_image(
-                        cover_img,
-                        secret_img
                     )
 
-                st.success("Encoding Completed Successfully!")
+                    st.subheader("📊 Quality Metrics")
 
-                metrics = evaluate(
-                    cover_tensor,
-                    secret_tensor,
-                    stego_tensor,
-                    recovered_tensor
-                )
+                    col1, col2 = st.columns(2)
 
-                st.subheader("📊 Quality Metrics")
+                    with col1:
 
-                col1, col2 = st.columns(2)
+                        st.metric(
+                            "Cover → Stego PSNR",
+                            f"{metrics['cover_psnr']} dB"
+                        )
 
-                with col1:
-                    st.metric(
-                        "Cover → Stego PSNR",
-                        f"{metrics['cover_psnr']} dB"
+                        st.metric(
+                            "Cover → Stego SSIM",
+                            metrics["cover_ssim"]
+                        )
+
+                    with col2:
+
+                        st.metric(
+                            "Secret → Recovered PSNR",
+                            f"{metrics['secret_psnr']} dB"
+                        )
+
+                        st.metric(
+                            "Secret → Recovered SSIM",
+                            metrics["secret_ssim"]
+                        )
+
+
+                    # ====================================
+                    # IMAGE COMPARISON
+                    # ====================================
+
+                    st.divider()
+
+                    st.subheader("🖼️ Image Comparison")
+
+                    c1, c2, c3, c4 = st.columns(4)
+
+                    with c1:
+
+                        st.image(
+                            cover_img,
+                            caption="Cover Image",
+                            use_container_width=True
+                        )
+
+                    with c2:
+
+                        st.image(
+                            secret_img,
+                            caption="Secret Image",
+                            use_container_width=True
+                        )
+
+                    with c3:
+
+                        st.image(
+                            stego,
+                            caption="Stego Image",
+                            use_container_width=True
+                        )
+
+                    with c4:
+
+                        st.image(
+                            recovered,
+                            caption="Recovered Secret",
+                            use_container_width=True
+                        )
+
+
+                    # ====================================
+                    # DOWNLOAD
+                    # ====================================
+
+                    st.divider()
+
+                    st.download_button(
+                        label="📥 Download Stego Image",
+                        data=get_download_bytes(stego),
+                        file_name="stego_image.png",
+                        mime="image/png"
                     )
-                    st.metric(
-                        "Cover → Stego SSIM",
-                        metrics["cover_ssim"]
+
+
+                except FileNotFoundError as e:
+
+                    st.error(
+                        "❌ Model checkpoint file was not found."
                     )
 
-                with col2:
-                    st.metric(
-                        "Secret → Recovered PSNR",
-                        f"{metrics['secret_psnr']} dB"
-                    )
-                    st.metric(
-                        "Secret → Recovered SSIM",
-                        metrics["secret_ssim"]
-                    )
+                    st.code(str(e))
 
-                st.divider()
 
-                st.subheader("🖼️ Image Comparison")
+                except RuntimeError as e:
 
-                c1, c2, c3, c4 = st.columns(4)
-
-                with c1:
-                    st.image(
-                        cover_img,
-                        caption="Cover Image",
-                        use_container_width=True
+                    st.error(
+                        "❌ Deep Learning model error."
                     )
 
-                with c2:
-                    st.image(
-                        secret_img,
-                        caption="Secret Image",
-                        use_container_width=True
+                    st.code(str(e))
+
+
+                except Exception as e:
+
+                    st.error(
+                        "❌ Unexpected error while encoding images."
                     )
 
-                with c3:
-                    st.image(
-                        stego,
-                        caption="Stego Image",
-                        use_container_width=True
-                    )
+                    st.code(str(e))
 
-                with c4:
-                    st.image(
-                        recovered,
-                        caption="Recovered Secret",
-                        use_container_width=True
-                    )
-
-                st.download_button(
-                    label="📥 Download Stego Image",
-                    data=get_download_bytes(stego),
-                    file_name="stego_image.png",
-                    mime="image/png"
-                )
 
     # ====================================================
     # IMAGE DECODE
@@ -203,7 +280,7 @@ if mode == "🖼️ Image Steganography":
 
     else:
 
-        st.subheader("Recover Hidden Image")
+        st.subheader("🔓 Recover Hidden Image")
 
         stego_file = st.file_uploader(
             "Upload Stego Image",
@@ -211,43 +288,88 @@ if mode == "🖼️ Image Steganography":
             key="decode_image"
         )
 
-        if st.button("🔓 Decode Image"):
+        if st.button(
+            "🔓 Decode Image"
+        ):
 
             if stego_file is None:
 
-                st.warning("Please upload a stego image.")
+                st.warning(
+                    "⚠️ Please upload a Stego Image."
+                )
 
             else:
 
-                stego_img = Image.open(stego_file).convert("RGB")
+                try:
 
-                with st.spinner("Decoding..."):
+                    stego_img = Image.open(
+                        stego_file
+                    ).convert("RGB")
 
-                    recovered = decode_image(stego_img)
+                    with st.spinner(
+                        "🤖 AI model is recovering the hidden image..."
+                    ):
 
-                st.success("Secret Image Recovered Successfully!")
+                        recovered = decode_image(
+                            stego_img
+                        )
 
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    st.image(
-                        stego_img,
-                        caption="Stego Image",
-                        use_container_width=True
+                    st.success(
+                        "✅ Secret Image Recovered Successfully!"
                     )
 
-                with col2:
-                    st.image(
-                        recovered,
-                        caption="Recovered Secret Image",
-                        use_container_width=True
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+
+                        st.image(
+                            stego_img,
+                            caption="Stego Image",
+                            use_container_width=True
+                        )
+
+                    with col2:
+
+                        st.image(
+                            recovered,
+                            caption="Recovered Secret Image",
+                            use_container_width=True
+                        )
+
+
+                except FileNotFoundError as e:
+
+                    st.error(
+                        "❌ Model checkpoint file was not found."
                     )
+
+                    st.code(str(e))
+
+
+                except RuntimeError as e:
+
+                    st.error(
+                        "❌ Deep Learning model error."
+                    )
+
+                    st.code(str(e))
+
+
+                except Exception as e:
+
+                    st.error(
+                        "❌ Unexpected error while decoding the image."
+                    )
+
+                    st.code(str(e))
+
 
 # ========================================================
 # TEXT STEGANOGRAPHY
 # ========================================================
 
 else:
+
     operation = st.radio(
         "Choose Operation",
         (
@@ -260,13 +382,14 @@ else:
 
     st.divider()
 
+
     # ====================================================
     # TEXT ENCODE
     # ====================================================
 
     if operation == "🔐 Encode":
 
-        st.subheader("Hide Text Inside an Image")
+        st.subheader("🔐 Hide Text Inside an Image")
 
         cover = st.file_uploader(
             "Upload Cover Image",
@@ -275,7 +398,8 @@ else:
         )
 
         message = st.text_area(
-            "Secret Message"
+            "Secret Message",
+            placeholder="Enter your secret message here..."
         )
 
         password = st.text_input(
@@ -284,53 +408,96 @@ else:
             key="encode_password"
         )
 
-        if st.button("🔐 Encode Message"):
+
+        if st.button(
+            "🔐 Encode Message"
+        ):
 
             if cover is None:
 
-                st.warning("Please upload a cover image.")
+                st.warning(
+                    "⚠️ Please upload a Cover Image."
+                )
 
-            elif message.strip() == "":
+            elif not message.strip():
 
-                st.warning("Please enter a message.")
+                st.warning(
+                    "⚠️ Please enter a secret message."
+                )
 
             else:
 
-                image = Image.open(cover).convert("RGB")
+                try:
 
-                stego = encode_text(
-                    image,
-                    message,
-                    password
-                )
+                    image = Image.open(
+                        cover
+                    ).convert("RGB")
 
-                st.success("Message Encoded Successfully!")
+                    with st.spinner(
+                        "🔐 Hiding your message inside the image..."
+                    ):
 
-                col1, col2 = st.columns(2)
+                        stego = encode_text(
+                            image.copy(),
+                            message,
+                            password
+                        )
 
-                with col1:
-                    st.image(
-                        image,
-                        caption="Original Image",
-                        use_container_width=True
+                    st.success(
+                        "✅ Message Encoded Successfully!"
                     )
 
-                with col2:
-                    st.image(
-                        stego,
-                        caption="Stego Image",
-                        use_container_width=True
+
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+
+                        st.image(
+                            image,
+                            caption="Original Image",
+                            use_container_width=True
+                        )
+
+                    with col2:
+
+                        st.image(
+                            stego,
+                            caption="Stego Image",
+                            use_container_width=True
+                        )
+
+
+                    # Download
+                    buffer = io.BytesIO()
+
+                    stego.save(
+                        buffer,
+                        format="PNG"
                     )
 
-                buffer = io.BytesIO()
-                stego.save(buffer, format="PNG")
+                    st.download_button(
+                        label="📥 Download Stego Image",
+                        data=buffer.getvalue(),
+                        file_name="stego_text.png",
+                        mime="image/png"
+                    )
 
-                st.download_button(
-                    label="📥 Download Stego Image",
-                    data=buffer.getvalue(),
-                    file_name="stego_text.png",
-                    mime="image/png"
-                )
+
+                except ValueError as e:
+
+                    st.error(
+                        f"❌ {str(e)}"
+                    )
+
+
+                except Exception as e:
+
+                    st.error(
+                        "❌ Error while encoding the message."
+                    )
+
+                    st.code(str(e))
+
 
     # ====================================================
     # TEXT DECODE
@@ -338,7 +505,7 @@ else:
 
     else:
 
-        st.subheader("Recover Hidden Message")
+        st.subheader("🔓 Recover Hidden Message")
 
         stego_file = st.file_uploader(
             "Upload Stego Image",
@@ -352,31 +519,67 @@ else:
             key="decode_password"
         )
 
-        if st.button("🔓 Decode Message"):
+
+        if st.button(
+            "🔓 Decode Message"
+        ):
 
             if stego_file is None:
 
-                st.warning("Please upload a stego image.")
+                st.warning(
+                    "⚠️ Please upload a Stego Image."
+                )
 
             else:
 
-                image = Image.open(stego_file).convert("RGB")
+                try:
 
-                message = decode_text(
-                    image,
-                    password
-                )
+                    image = Image.open(
+                        stego_file
+                    ).convert("RGB")
 
-                st.success("Message Recovered Successfully!")
+                    with st.spinner(
+                        "🔍 Extracting hidden message..."
+                    ):
 
-                st.text_area(
-                    "Recovered Message",
-                    value=message,
-                    height=180
-                )
+                        message = decode_text(
+                            image,
+                            password
+                        )
 
-                st.image(
-                    image,
-                    caption="Stego Image",
-                    use_container_width=True
-                )
+
+                    if message.startswith("❌"):
+
+                        st.error(message)
+
+                    elif message.startswith("🔐"):
+
+                        st.warning(message)
+
+                    else:
+
+                        st.success(
+                            "✅ Message Recovered Successfully!"
+                        )
+
+                        st.text_area(
+                            "Recovered Message",
+                            value=message,
+                            height=180
+                        )
+
+
+                    st.image(
+                        image,
+                        caption="Stego Image",
+                        use_container_width=True
+                    )
+
+
+                except Exception as e:
+
+                    st.error(
+                        "❌ Error while decoding the message."
+                    )
+
+                    st.code(str(e))
